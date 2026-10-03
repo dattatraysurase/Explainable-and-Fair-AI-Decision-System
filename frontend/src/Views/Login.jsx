@@ -34,6 +34,8 @@ export default function Login() {
     navigate("/dashboard")
   }
 
+  
+
   return (
     <div className="min-h-screen bg-slate-50">
 
@@ -149,3 +151,4 @@ export default function Login() {
     </div>
   )
 }
+
