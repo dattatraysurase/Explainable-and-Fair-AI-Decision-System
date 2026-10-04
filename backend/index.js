@@ -3,6 +3,8 @@ import cors from "cors"
 import dotenv from "dotenv"
 import connectDB from "./config/db.js"
 
+import predictionRoutes from "./routes/predictionRoutes.js";
+
 dotenv.config()
 
 const app = express()
@@ -10,11 +12,17 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
+
+app.use("/api/predictions", predictionRoutes);
+
+
 app.get("/", (req, res) => {
   res.json({
     message: "ExplainAI Backend is running"
   })
 })
+
+
 
 const PORT = process.env.PORT || 5000
 
