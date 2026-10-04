@@ -77,7 +77,7 @@ export default function Login() {
       // Redirect after 9 seconds
       setTimeout(() => {
         navigate("/dashboard")
-      }, 9000)
+      }, 3000)
 
     } catch (error) {
       console.error("Login error:", error)
