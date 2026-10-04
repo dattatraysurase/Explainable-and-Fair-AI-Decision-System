@@ -1,45 +1,94 @@
-import { useState } from "react"
-import { LockKeyhole, Mail, UserRound, ArrowRight } from "lucide-react"
-import { Link, useNavigate } from "react-router-dom"
-import Navbar from "../Components/Navbar"
-import Footer from "../Components/Footer"
+import { useState } from "react";
+import {
+  LockKeyhole,
+  Mail,
+  UserRound,
+  ArrowRight,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import Navbar from "../Components/Navbar";
+import Footer from "../Components/Footer";
 
 export default function Register() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
-  })
+    confirmPassword: "",
+  });
 
-  const [error, setError] = useState("")
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({
       ...form,
-      [e.target.name]: e.target.value
-    })
+      [e.target.name]: e.target.value,
+    });
 
-    setError("")
-  }
+    setError("");
+  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
+    setError("");
+
+    // Password match
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match")
-      return
+      setError("Passwords do not match");
+      return;
     }
 
+    // Password length
     if (form.password.length < 6) {
-      setError("Password must be at least 6 characters")
-      return
+      setError("Password must be at least 6 characters");
+      return;
     }
 
-    navigate("/login")
-  }
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        "http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            password: form.password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || "Registration failed");
+        return;
+      }
+
+      // Success
+      alert("Account created successfully!");
+
+      // Login page
+      navigate("/login");
+
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      setError(
+        "Unable to connect to server. Please make sure backend is running."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
@@ -62,14 +111,19 @@ export default function Register() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            <form
+              onSubmit={handleSubmit}
+              className="mt-7 space-y-5"
+            >
 
+              {/* Full Name */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Full Name
                 </label>
 
                 <div className="relative">
+
                   <UserRound
                     size={18}
                     className="absolute left-3 top-3.5 text-slate-400"
@@ -84,15 +138,18 @@ export default function Register() {
                     required
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   />
+
                 </div>
               </div>
 
+              {/* Email */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Email Address
                 </label>
 
                 <div className="relative">
+
                   <Mail
                     size={18}
                     className="absolute left-3 top-3.5 text-slate-400"
@@ -107,15 +164,18 @@ export default function Register() {
                     required
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   />
+
                 </div>
               </div>
 
+              {/* Password */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Password
                 </label>
 
                 <div className="relative">
+
                   <LockKeyhole
                     size={18}
                     className="absolute left-3 top-3.5 text-slate-400"
@@ -130,15 +190,18 @@ export default function Register() {
                     required
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   />
+
                 </div>
               </div>
 
+              {/* Confirm Password */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
                   Confirm Password
                 </label>
 
                 <div className="relative">
+
                   <LockKeyhole
                     size={18}
                     className="absolute left-3 top-3.5 text-slate-400"
@@ -153,35 +216,52 @@ export default function Register() {
                     required
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   />
+
                 </div>
               </div>
 
+              {/* Error */}
               {error && (
                 <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                   {error}
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99]"
+                disabled={loading}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Create Account
-                <ArrowRight size={17} />
+
+                {loading ? (
+                  "Creating account..."
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight size={17} />
+                  </>
+                )}
+
               </button>
 
             </form>
 
             <div className="mt-6 text-center">
+
               <p className="text-sm text-slate-500">
+
                 Already have an account?{" "}
+
                 <Link
                   to="/login"
                   className="font-bold text-blue-600 transition hover:text-blue-700"
                 >
                   Sign in
                 </Link>
+
               </p>
+
             </div>
 
           </div>
@@ -197,5 +277,5 @@ export default function Register() {
       <Footer />
 
     </div>
-  )
+  );
 }

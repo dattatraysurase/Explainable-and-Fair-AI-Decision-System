@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { LockKeyhole, Mail, ArrowRight } from "lucide-react"
+import { LockKeyhole, Mail, ArrowRight, CheckCircle } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import Navbar from "../Components/Navbar"
 import Footer from "../Components/Footer"
@@ -13,6 +13,8 @@ export default function Login() {
   })
 
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const [loading, setLoading] = useState(false)
 
   const handleChange = (e) => {
     setForm({
@@ -23,15 +25,69 @@ export default function Login() {
     setError("")
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+
+    setError("")
+    setSuccess("")
 
     if (!form.email || !form.password) {
       setError("Please enter your email and password")
       return
     }
 
-    navigate("/dashboard")
+    try {
+      setLoading(true)
+
+      const response = await fetch(
+        "http://localhost:5000/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password
+          })
+        }
+      )
+
+      const data = await response.json()
+
+      console.log("Login response:", data)
+
+      if (!response.ok) {
+        setError(data.message || "Login failed")
+        return
+      }
+
+      // Save JWT token
+      localStorage.setItem("token", data.token)
+
+      // Save user data
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user)
+      )
+
+      // Success message
+      setSuccess("Login successful!")
+
+      // Redirect after 9 seconds
+      setTimeout(() => {
+        navigate("/dashboard")
+      }, 9000)
+
+    } catch (error) {
+      console.error("Login error:", error)
+
+      setError(
+        "Unable to connect to server. Please make sure backend is running."
+      )
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -57,7 +113,12 @@ export default function Login() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+              <form
+                onSubmit={handleSubmit}
+                className="mt-8 space-y-6"
+              >
+
+                {/* Email */}
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -65,6 +126,7 @@ export default function Login() {
                   </label>
 
                   <div className="relative">
+
                     <Mail
                       size={18}
                       className="absolute left-3 top-4 text-slate-400"
@@ -79,8 +141,11 @@ export default function Login() {
                       required
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                     />
+
                   </div>
                 </div>
+
+                {/* Password */}
 
                 <div>
                   <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -88,6 +153,7 @@ export default function Login() {
                   </label>
 
                   <div className="relative">
+
                     <LockKeyhole
                       size={18}
                       className="absolute left-3 top-4 text-slate-400"
@@ -102,8 +168,11 @@ export default function Login() {
                       required
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-4 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                     />
+
                   </div>
                 </div>
+
+                {/* Error */}
 
                 {error && (
                   <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
@@ -111,26 +180,44 @@ export default function Login() {
                   </div>
                 )}
 
+                {/* Login Button */}
+
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99]"
+                  disabled={loading}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Sign In
-                  <ArrowRight size={17} />
+
+                  {loading ? (
+                    "Signing in..."
+                  ) : (
+                    <>
+                      Sign In
+                      <ArrowRight size={17} />
+                    </>
+                  )}
+
                 </button>
 
               </form>
 
+              {/* Register Link */}
+
               <div className="mt-8 text-center">
+
                 <p className="text-sm text-slate-500">
+
                   Don't have an account?{" "}
+
                   <Link
                     to="/register"
                     className="font-bold text-blue-600 transition hover:text-blue-700"
                   >
                     Create account
                   </Link>
+
                 </p>
+
               </div>
 
             </div>
@@ -144,7 +231,29 @@ export default function Login() {
         </div>
 
       </div>
-      <Footer/>
+
+      <Footer />
+
+      {/* Success Toast */}
+
+      {success && (
+        <div className="fixed bottom-6 left-6 z-50">
+
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3.5 shadow-[0_10px_30px_rgba(22,32,51,0.12)]">
+
+            <CheckCircle
+              size={20}
+              className="text-blue-600"
+            />
+
+            <span className="text-sm font-semibold text-slate-700">
+              {success}
+            </span>
+
+          </div>
+
+        </div>
+      )}
 
     </div>
   )
