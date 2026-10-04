@@ -4,6 +4,7 @@ import {
   Mail,
   UserRound,
   ArrowRight,
+  CheckCircle,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../Components/Navbar";
@@ -20,6 +21,7 @@ export default function Register() {
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -35,6 +37,7 @@ export default function Register() {
     e.preventDefault();
 
     setError("");
+    setSuccess("");
 
     // Password match
     if (form.password !== form.confirmPassword) {
@@ -73,11 +76,13 @@ export default function Register() {
         return;
       }
 
-      // Success
-      alert("Account created successfully!");
+      // Success message
+      setSuccess("Account created successfully");
 
-      // Login page
-      navigate("/login");
+      // Login page after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
 
     } catch (error) {
       console.error("Registration error:", error);
@@ -142,6 +147,7 @@ export default function Register() {
                 </div>
               </div>
 
+
               {/* Email */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -167,6 +173,7 @@ export default function Register() {
 
                 </div>
               </div>
+
 
               {/* Password */}
               <div>
@@ -194,6 +201,7 @@ export default function Register() {
                 </div>
               </div>
 
+
               {/* Confirm Password */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-slate-700">
@@ -220,14 +228,18 @@ export default function Register() {
                 </div>
               </div>
 
+
               {/* Error */}
+
               {error && (
                 <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                   {error}
                 </div>
               )}
 
+
               {/* Submit */}
+
               <button
                 type="submit"
                 disabled={loading}
@@ -246,6 +258,7 @@ export default function Register() {
               </button>
 
             </form>
+
 
             <div className="mt-6 text-center">
 
@@ -273,6 +286,29 @@ export default function Register() {
         </div>
 
       </main>
+
+
+      {/* ================= SUCCESS MESSAGE ================= */}
+
+      {success && (
+        <div className="fixed bottom-6 left-6 z-50">
+
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3.5 shadow-[0_10px_30px_rgba(22,32,51,0.12)]">
+
+            <CheckCircle
+              size={20}
+              className="text-blue-600"
+            />
+
+            <span className="text-sm font-semibold text-slate-700">
+              {success}
+            </span>
+
+          </div>
+
+        </div>
+      )}
+
 
       <Footer />
 
