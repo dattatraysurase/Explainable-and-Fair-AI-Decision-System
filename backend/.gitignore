@@ -1,0 +1,18 @@
+backend/.env
+
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.*
+
+# Build files
+dist/
+build/
+
+
+node_modules/
+.env
+.env.*
+!.env.example

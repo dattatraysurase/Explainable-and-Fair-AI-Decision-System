@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { ArrowRight, BrainCircuit, RotateCcw } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import Footer from "../Components/Footer"
 import Navbar from "../Components/Navbar"
+import { predictLoan } from "../api/predictionApi"
 
 const initialForm = {
   age: "",
@@ -17,6 +18,9 @@ const Prediction = () => {
   const [form, setForm] = useState(initialForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [predictionResult, setPredictionResult] = useState(null)
+
+  const navigate = useNavigate()
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -34,16 +38,54 @@ const Prediction = () => {
 
     setLoading(true)
     setError("")
+    setPredictionResult(null)
 
     try {
-      // Backend API will be connected here.
-      console.log("Loan Prediction Input:", form)
+      // Get JWT token
+      const token = localStorage.getItem("token")
 
-      // Temporary:
-      // API endpoint will be added after checking backend code.
+      if (!token) {
+        setError("Please login again.")
+        return
+      }
+
+      // Prepare data for backend
+      const data = {
+        age: Number(form.age),
+        income: Number(form.income),
+        creditScore: Number(form.creditScore),
+        employment: form.employment,
+        loanAmount: Number(form.loanAmount),
+        loanTerm: Number(form.loanTerm)
+      }
+
+      // Call backend API
+      const result = await predictLoan(data, token)
+
+      // Store result in state
+      setPredictionResult(result)
+
+      // Store prediction result and applicant information
+      localStorage.setItem(
+        "predictionResult",
+        JSON.stringify({
+          ...result,
+          applicant: data
+        })
+      )
+
+      console.log("Prediction Result:", result)
+
+      // Go to Prediction Result page
+      navigate(`/prediction-result/${result.predictionId}`)
+
     } catch (error) {
-      console.error(error)
-      setError("Unable to generate prediction.")
+      console.error("Prediction Error:", error)
+
+      setError(
+        error.message || "Unable to generate prediction."
+      )
+
     } finally {
       setLoading(false)
     }
@@ -52,6 +94,7 @@ const Prediction = () => {
   const handleReset = () => {
     setForm(initialForm)
     setError("")
+    setPredictionResult(null)
   }
 
   return (
@@ -166,9 +209,9 @@ const Prediction = () => {
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
                   >
                     <option value="">Select status</option>
-                    <option value="employed">Employed</option>
-                    <option value="self-employed">Self Employed</option>
-                    <option value="unemployed">Unemployed</option>
+                    <option value="Salaried">Salaried</option>
+                    <option value="Self-Employed">Self Employed</option>
+                    <option value="Unemployed">Unemployed</option>
                   </select>
                 </div>
 
@@ -241,6 +284,62 @@ const Prediction = () => {
               </div>
 
             </form>
+
+            {/* Prediction Result */}
+            {predictionResult && (
+              <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+
+                <div className="flex items-center justify-between">
+
+                  <div>
+                    <p className="text-sm font-semibold text-slate-500">
+                      Prediction Result
+                    </p>
+
+                    <h3 className="mt-1 text-2xl font-bold text-slate-950">
+                      {predictionResult.prediction}
+                    </h3>
+                  </div>
+
+                  <div
+                    className={`rounded-full px-4 py-2 text-sm font-bold ${
+                      predictionResult.prediction === "Approved"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {predictionResult.prediction}
+                  </div>
+
+                </div>
+
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-sm text-slate-500">
+                      Approval Probability
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold text-slate-900">
+                      {predictionResult.probability?.Approved}%
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-white p-4">
+                    <p className="text-sm text-slate-500">
+                      Rejection Probability
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold text-slate-900">
+                      {predictionResult.probability?.Rejected}%
+                    </p>
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
           </div>
 
           <div className="h-fit rounded-3xl border border-slate-200 bg-slate-950 p-6 text-white">

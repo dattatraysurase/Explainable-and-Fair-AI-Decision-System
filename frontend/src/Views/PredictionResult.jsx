@@ -1,63 +1,207 @@
+import { useEffect, useState } from "react"
 import {
   ArrowLeft,
+  ArrowRight,
+  BriefcaseBusiness,
   CheckCircle2,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  UserRound,
   CreditCard,
   IndianRupee,
-  ArrowRight,
-  BriefcaseBusiness
+  ShieldCheck,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  UserRound,
+  XCircle
 } from "lucide-react"
-import { Link } from "react-router-dom"
+import {
+  Link,
+  useParams
+} from "react-router-dom"
 import Navbar from "../Components/Navbar"
 import Footer from "../Components/Footer"
+import { getPredictionById } from "../api/predictionApi"
 
 const PredictionResult = () => {
-  const result = {
-    decision: "Approved",
-    confidence: "92%",
-    applicant: {
-      age: "32",
-      income: "₹8,00,000",
-      creditScore: "760",
-      employment: "Employed",
-      loanAmount: "₹5,00,000",
-      loanTerm: "36 Months"
+  const { id } = useParams()
+
+  const [result, setResult] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    const fetchPrediction = async () => {
+      try {
+        const token = localStorage.getItem("token")
+
+        if (!token) {
+          setError("Please login again.")
+          return
+        }
+
+        if (!id) {
+          setError("Prediction ID is missing.")
+          return
+        }
+
+        const response = await getPredictionById(
+          id,
+          token
+        )
+
+        if (response.prediction) {
+          setResult(response.prediction)
+        } else {
+          setError("Prediction not found.")
+        }
+
+      } catch (error) {
+        console.error(
+          "Prediction Result Error:",
+          error
+        )
+
+        setError(
+          error.message ||
+          "Unable to load prediction result."
+        )
+
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchPrediction()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+
+        <Navbar />
+
+        <main className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center px-4">
+
+          <div className="text-center">
+
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+
+            <p className="mt-4 text-sm text-slate-500">
+              Loading prediction result...
+            </p>
+
+          </div>
+
+        </main>
+
+        <Footer />
+
+      </div>
+    )
   }
 
-  const factors = [
-    {
-      name: "Credit Score",
-      value: "+0.38",
-      description: "Strong credit score positively influenced the decision.",
-      width: "76%",
-      type: "positive"
-    },
-    {
-      name: "Annual Income",
-      value: "+0.31",
-      description: "Stable income supports the loan repayment capability.",
-      width: "62%",
-      type: "positive"
-    },
-    {
-      name: "Loan Amount",
-      value: "+0.18",
-      description: "Requested loan amount is within the acceptable range.",
-      width: "45%",
-      type: "positive"
-    },
-    {
-      name: "Existing Risk",
-      value: "-0.14",
-      description: "Some risk factors slightly affected the decision.",
-      width: "28%",
-      type: "negative"
+  if (error || !result) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+
+        <Navbar />
+
+        <main className="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center px-4">
+
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+
+            <p className="font-semibold text-red-600">
+              {error || "Prediction result not found."}
+            </p>
+
+            <Link
+              to="/loan-prediction"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white"
+            >
+              New Prediction
+              <ArrowRight size={16} />
+            </Link>
+
+          </div>
+
+        </main>
+
+        <Footer />
+
+      </div>
+    )
+  }
+
+  const isApproved =
+    result.prediction === "Approved"
+
+  const confidence = isApproved
+    ? result.approvedProbability
+    : result.rejectedProbability
+
+  const explanation =
+    result.explanation || []
+
+  const fairness =
+    result.fairness || {
+      fairnessScore: 0,
+      groups: []
     }
-  ]
+
+  /* --------------------------------
+     Feature Name Formatting
+  -------------------------------- */
+
+  const formatFeatureName = (feature) => {
+    const featureNames = {
+      Age: "Age",
+      Income: "Annual Income",
+      CreditScore: "Credit Score",
+      Employment: "Employment",
+      LoanAmount: "Loan Amount",
+      LoanTerm: "Loan Term"
+    }
+
+    return featureNames[feature] || feature
+  }
+
+  /* --------------------------------
+     Explanation Description
+  -------------------------------- */
+
+  const getExplanationDescription = (
+    feature,
+    effect
+  ) => {
+    const readableFeature =
+      formatFeatureName(feature)
+
+    if (effect === "Positive") {
+      return `${readableFeature} positively influenced the prediction.`
+    }
+
+    if (effect === "Negative") {
+      return `${readableFeature} negatively influenced the prediction.`
+    }
+
+    return `${readableFeature} had a neutral influence on the prediction.`
+  }
+
+  /* --------------------------------
+     Explanation Bar Width
+  -------------------------------- */
+
+  const getBarWidth = (value) => {
+    const numericValue = Math.abs(
+      Number(value)
+    )
+
+    if (numericValue >= 1) return "90%"
+    if (numericValue >= 0.75) return "75%"
+    if (numericValue >= 0.5) return "60%"
+    if (numericValue >= 0.25) return "45%"
+
+    return "30%"
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -66,7 +210,9 @@ const PredictionResult = () => {
 
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
 
-        {/* Header */}
+        {/* --------------------------------
+            Header
+        -------------------------------- */}
 
         <div className="mb-7">
 
@@ -88,7 +234,9 @@ const PredictionResult = () => {
 
         </div>
 
-        {/* Main Result */}
+        {/* --------------------------------
+            Main Result
+        -------------------------------- */}
 
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
 
@@ -100,18 +248,38 @@ const PredictionResult = () => {
 
               <div className="flex items-center gap-4">
 
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-                  <CheckCircle2 size={28} />
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-2xl ${
+                    isApproved
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "bg-red-50 text-red-600"
+                  }`}
+                >
+
+                  {isApproved ? (
+                    <CheckCircle2 size={28} />
+                  ) : (
+                    <XCircle size={28} />
+                  )}
+
                 </div>
 
                 <div>
+
                   <p className="text-sm font-medium text-slate-500">
                     Loan Decision
                   </p>
 
-                  <h2 className="mt-1 text-3xl font-bold text-emerald-600">
-                    {result.decision}
+                  <h2
+                    className={`mt-1 text-3xl font-bold ${
+                      isApproved
+                        ? "text-emerald-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {result.prediction}
                   </h2>
+
                 </div>
 
               </div>
@@ -121,25 +289,43 @@ const PredictionResult = () => {
                 <div className="flex items-end justify-between">
 
                   <div>
+
                     <p className="text-sm text-slate-500">
                       Prediction Confidence
                     </p>
 
                     <p className="mt-1 text-3xl font-bold text-slate-950">
-                      {result.confidence}
+                      {confidence}%
                     </p>
+
                   </div>
 
-                  <TrendingUp
-                    size={23}
-                    className="text-emerald-500"
-                  />
+                  {isApproved ? (
+                    <TrendingUp
+                      size={23}
+                      className="text-emerald-500"
+                    />
+                  ) : (
+                    <TrendingDown
+                      size={23}
+                      className="text-red-500"
+                    />
+                  )}
 
                 </div>
 
                 <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-slate-100">
 
-                  <div className="h-full w-[92%] rounded-full bg-emerald-500" />
+                  <div
+                    className={`h-full rounded-full ${
+                      isApproved
+                        ? "bg-emerald-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{
+                      width: `${confidence}%`
+                    }}
+                  />
 
                 </div>
 
@@ -147,7 +333,7 @@ const PredictionResult = () => {
 
             </div>
 
-            {/* Status */}
+            {/* AI Status */}
 
             <div className="flex flex-col justify-center bg-slate-950 p-6 text-white sm:p-8">
 
@@ -173,7 +359,9 @@ const PredictionResult = () => {
 
         </section>
 
-        {/* Applicant Information */}
+        {/* --------------------------------
+            Applicant Information
+        -------------------------------- */}
 
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-7">
 
@@ -184,6 +372,7 @@ const PredictionResult = () => {
             </div>
 
             <div>
+
               <h2 className="text-lg font-bold text-slate-950">
                 Applicant Information
               </h2>
@@ -191,91 +380,135 @@ const PredictionResult = () => {
               <p className="text-sm text-slate-500">
                 Information used for this prediction
               </p>
+
             </div>
 
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
+            {/* Age */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <p className="text-xs text-slate-400">
                 Age
               </p>
 
               <p className="mt-1 text-sm font-bold text-slate-900">
-                {result.applicant.age} Years
+                {result.age} Years
               </p>
+
             </div>
 
+            {/* Annual Income */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <div className="flex items-center gap-2">
-                <IndianRupee size={14} className="text-slate-400" />
+
+                <IndianRupee
+                  size={14}
+                  className="text-slate-400"
+                />
 
                 <p className="text-xs text-slate-400">
                   Annual Income
                 </p>
+
               </div>
 
               <p className="mt-1 text-sm font-bold text-slate-900">
-                {result.applicant.income}
+                ₹{Number(result.income).toLocaleString("en-IN")}
               </p>
+
             </div>
 
+            {/* Credit Score */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <div className="flex items-center gap-2">
-                <CreditCard size={14} className="text-slate-400" />
+
+                <CreditCard
+                  size={14}
+                  className="text-slate-400"
+                />
 
                 <p className="text-xs text-slate-400">
                   Credit Score
                 </p>
+
               </div>
 
               <p className="mt-1 text-sm font-bold text-slate-900">
-                {result.applicant.creditScore}
+                {result.creditScore}
               </p>
+
             </div>
 
+            {/* Employment */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <div className="flex items-center gap-2">
-                <BriefcaseBusiness size={14} className="text-slate-400" />
+
+                <BriefcaseBusiness
+                  size={14}
+                  className="text-slate-400"
+                />
 
                 <p className="text-xs text-slate-400">
                   Employment
                 </p>
+
               </div>
 
-              <p className="mt-1 text-sm font-bold capitalize text-slate-900">
-                {result.applicant.employment}
+              <p className="mt-1 text-sm font-bold text-slate-900">
+                {result.employment}
               </p>
+
             </div>
 
+            {/* Loan Amount */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <p className="text-xs text-slate-400">
                 Loan Amount
               </p>
 
               <p className="mt-1 text-sm font-bold text-slate-900">
-                {result.applicant.loanAmount}
+                ₹{Number(result.loanAmount).toLocaleString("en-IN")}
               </p>
+
             </div>
 
+            {/* Loan Term */}
+
             <div className="rounded-xl bg-slate-50 p-4">
+
               <p className="text-xs text-slate-400">
                 Loan Term
               </p>
 
               <p className="mt-1 text-sm font-bold text-slate-900">
-                {result.applicant.loanTerm}
+                {result.loanTerm} Months
               </p>
+
             </div>
 
           </div>
 
         </section>
 
-        {/* Decision Explanation */}
+        {/* --------------------------------
+            Explanation + Fairness
+        -------------------------------- */}
 
         <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_1fr]">
+
+          {/* Decision Explanation */}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7">
 
@@ -286,6 +519,7 @@ const PredictionResult = () => {
               </div>
 
               <div>
+
                 <h2 className="text-lg font-bold text-slate-950">
                   Decision Explanation
                 </h2>
@@ -293,62 +527,93 @@ const PredictionResult = () => {
                 <p className="text-sm text-slate-500">
                   Factors influencing the prediction
                 </p>
+
               </div>
 
             </div>
 
             <div className="mt-7 space-y-5">
 
-              {factors.map((factor) => (
+              {explanation.map(
+                (factor, index) => (
 
-                <div key={factor.name}>
+                  <div
+                    key={`${factor.feature}-${index}`}
+                  >
 
-                  <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
 
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {factor.name}
-                      </p>
+                      <div>
 
-                      <p className="mt-1 text-xs text-slate-400">
-                        {factor.description}
-                      </p>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {formatFeatureName(
+                            factor.feature
+                          )}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          {getExplanationDescription(
+                            factor.feature,
+                            factor.effect
+                          )}
+                        </p>
+
+                      </div>
+
+                      <span
+                        className={`shrink-0 text-sm font-bold ${
+                          factor.effect === "Positive"
+                            ? "text-emerald-600"
+                            : factor.effect === "Negative"
+                            ? "text-red-500"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {Number(factor.value) > 0
+                          ? "+"
+                          : ""}
+                        {Number(
+                          factor.value
+                        ).toFixed(2)}
+                      </span>
+
                     </div>
 
-                    <span
-                      className={`text-sm font-bold ${
-                        factor.type === "positive"
-                          ? "text-emerald-600"
-                          : "text-red-500"
-                      }`}
-                    >
-                      {factor.value}
-                    </span>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+
+                      <div
+                        className={`h-full rounded-full ${
+                          factor.effect === "Positive"
+                            ? "bg-emerald-500"
+                            : factor.effect === "Negative"
+                            ? "bg-red-400"
+                            : "bg-slate-400"
+                        }`}
+                        style={{
+                          width: getBarWidth(
+                            factor.value
+                          )
+                        }}
+                      />
+
+                    </div>
 
                   </div>
 
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                )
+              )}
 
-                    <div
-                      className={`h-full rounded-full ${
-                        factor.type === "positive"
-                          ? "bg-emerald-500"
-                          : "bg-red-400"
-                      }`}
-                      style={{ width: factor.width }}
-                    />
-
-                  </div>
-
-                </div>
-
-              ))}
+              {explanation.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  No explanation data available for this prediction.
+                </p>
+              )}
 
             </div>
 
           </div>
 
-          {/* Fairness */}
+          {/* Fairness Analysis */}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-7">
 
@@ -359,6 +624,7 @@ const PredictionResult = () => {
               </div>
 
               <div>
+
                 <h2 className="text-lg font-bold text-slate-950">
                   Fairness Analysis
                 </h2>
@@ -366,22 +632,27 @@ const PredictionResult = () => {
                 <p className="text-sm text-slate-500">
                   Decision fairness indicator
                 </p>
+
               </div>
 
             </div>
+
+            {/* Fairness Score */}
 
             <div className="mt-7 rounded-2xl bg-slate-50 p-5">
 
               <div className="flex items-center justify-between">
 
                 <div>
+
                   <p className="text-sm text-slate-500">
                     Fairness Score
                   </p>
 
                   <p className="mt-1 text-3xl font-bold text-slate-950">
-                    92%
+                    {fairness.fairnessScore}%
                   </p>
+
                 </div>
 
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
@@ -391,13 +662,64 @@ const PredictionResult = () => {
               </div>
 
               <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full w-[92%] rounded-full bg-emerald-500" />
+
+                <div
+                  className="h-full rounded-full bg-emerald-500"
+                  style={{
+                    width: `${fairness.fairnessScore}%`
+                  }}
+                />
+
               </div>
 
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                The prediction has been reviewed using the available
-                fairness indicators.
+                Fairness score calculated from approval-rate differences across employment groups.
               </p>
+
+            </div>
+
+            {/* Fairness Groups */}
+
+            <div className="mt-5 space-y-3">
+
+              {fairness.groups?.map(
+                (group) => (
+
+                  <div
+                    key={group.employment}
+                    className="rounded-xl border border-slate-200 bg-white p-4"
+                  >
+
+                    <div className="flex items-center justify-between">
+
+                      <p className="text-sm font-semibold text-slate-800">
+                        {group.employment}
+                      </p>
+
+                      <p className="text-sm font-bold text-slate-950">
+                        {group.approvalRate}%
+                      </p>
+
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-xs text-slate-400">
+
+                      <span>
+                        Applications:{" "}
+                        {group.totalApplications}
+                      </span>
+
+                      <span>
+                        Approved:{" "}
+                        {group.approved}
+                      </span>
+
+                    </div>
+
+                  </div>
+
+                )
+              )}
 
             </div>
 
@@ -405,7 +727,9 @@ const PredictionResult = () => {
 
         </section>
 
-        {/* Actions */}
+        {/* --------------------------------
+            Actions
+        -------------------------------- */}
 
         <section className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
 
